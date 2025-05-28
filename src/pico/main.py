@@ -1,70 +1,113 @@
 from mfrc522 import MFRC522
 import utime
 import _thread
+import network
+import time
+import ntptime
+from umqtt.simple import MQTTClient
 
-# ——————————————————————————————————————————————
-# Shared queue + lock for passing card IDs to the callback thread
-# ——————————————————————————————————————————————
+# MQTT and Wi-Fi settings
+topic_pub = b"rfid/scan"
+MQTT_CLIENT_ID = b"pico_client"
+WIFI_SSID = "w"
+WIFI_PASSWORD = "12345678"
+MQTT_BROKER = "192.168.90.159"
+MQTT_PORT = 1883
+
+# Rest interval settings
+REST_MS = 2000
+last_card = None
+last_call_ts = 0
+
+# Thread-safe queue
 _request_queue = []
 _queue_lock = _thread.allocate_lock()
 
-def enqueue_card(card_id):
-    """Thread-safe enqueue of a card ID."""
+# RF reader init
+reader = MFRC522(spi_id=0, sck=6, miso=4, mosi=7, cs=5, rst=22)
+
+# Initialize and connect Wi-Fi
+def connect_wifi():
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(WIFI_SSID, WIFI_PASSWORD)
+    while not wlan.isconnected():
+        print("Connecting to WiFi…")
+        time.sleep(1)
+    print("WiFi connected, IP:", wlan.ifconfig()[0])
+
+# MQTT client (publish only)
+mqtt = MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER, port=MQTT_PORT, keepalive=60)
+
+# Enqueue/dequeue helpers
+def enqueue_card(card):
     _queue_lock.acquire()
-    _request_queue.append(card_id)
+    _request_queue.append(card)
     _queue_lock.release()
 
 def dequeue_card():
-    """Thread-safe pop of a card ID, or None if empty."""
     _queue_lock.acquire()
     card = _request_queue.pop(0) if _request_queue else None
     _queue_lock.release()
     return card
 
-# ——————————————————————————————————————————————
-# Your callback worker — runs on the other core
-# ——————————————————————————————————————————————
+# Worker thread: publish scans
 def callback_worker():
     while True:
         card = dequeue_card()
         if card is not None:
-            # <-- this runs on core 1
-            print("CALLBACK: CARD ID →", card)
-            # in the future, replace the above with your MQTT publish
+            print("card ID: ", str(card))
+            try:
+                mqtt.publish(topic_pub, str(card), qos=1)
+            except OSError:
+                # reconnect and retry once
+                try:
+                    mqtt.connect()
+                    mqtt.publish(topic_pub, str(card), qos=1)
+                except Exception as e:
+                    print("MQTT publish failed after retry:", e)
         else:
-            # nothing to do — yield a bit of time
             utime.sleep_ms(50)
 
-# start the callback thread on the 2nd core
-_thread.start_new_thread(callback_worker, ())
+# Start worker on second core
+def start_worker():
+    _thread.start_new_thread(callback_worker, ())
 
+# Main logic
+def main():
+    global last_card, last_call_ts
+    connect_wifi()
+    # sync time
+    try:
+        ntptime.settime()
+    except:
+        pass
 
-# ——————————————————————————————————————————————
-# Main loop: scan + enqueue with “rest timer”
-# ——————————————————————————————————————————————
-reader = MFRC522(spi_id=0, sck=6, miso=4, mosi=7, cs=5, rst=22)
+    # ensure MQTT connection
+    while True:
+        try:
+            mqtt.connect()
+            break
+        except OSError as e:
+            print("MQTT connect failed, retrying…", e)
+            time.sleep(2)
 
-REST_MS       = 2000    # rest interval for the same card
-last_card     = None
-last_call_ts  = 0       # utime.ticks_ms()
+    start_worker()
+    print("worker started")
 
-print("Bring TAG closer…\n")
-
-while True:
-    reader.init()
-    (stat, tag_type) = reader.request(reader.REQIDL)
-    if stat == reader.OK:
-        (stat, uid) = reader.SelectTagSN()
+    while True:
+        reader.init()
+        (stat, _) = reader.request(reader.REQIDL)
         if stat == reader.OK:
-            card = int.from_bytes(bytes(uid), "little", False)
-            now = utime.ticks_ms()
+            (stat, uid) = reader.SelectTagSN()
+            if stat == reader.OK:
+                card = int.from_bytes(bytes(uid), "little", False)
+                now = utime.ticks_ms()
+                if card != last_card or utime.ticks_diff(now, last_call_ts) >= REST_MS:
+                    enqueue_card(card)
+                    last_card = card
+                    last_call_ts = now
+        utime.sleep_ms(100)
 
-            # if brand-new card, or rest interval has elapsed:
-            if (card != last_card) or (utime.ticks_diff(now, last_call_ts) >= REST_MS):
-                enqueue_card(card)
-                last_card    = card
-                last_call_ts = now
-
-    # small delay to avoid thrashing the SPI bus
-    utime.sleep_ms(50)
-
+if __name__ == '__main__':
+    main()
