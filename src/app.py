@@ -40,6 +40,12 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS banned(
         card TEXT PRIMARY KEY
     )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS attempts(
+        id INTEGER PRIMARY KEY,
+        card TEXT,
+        successful BOOLEAN,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL
+    )''')
     conn.commit()
     conn.close()
 
@@ -137,18 +143,25 @@ def login():
             c.execute('SELECT 1 FROM banned WHERE card = ?', (card,))
             banned_row = c.fetchone()
             if banned_row:
+                c.execute('INSERT INTO attempts(card, successful) VALUES(?, ?)', (card,0))
+                conn.commit()
                 flash('You shall not pass because you are banned.', 'banned')
                 conn.close()
                 return redirect(url_for('index'))
             c.execute('SELECT username FROM cards WHERE card = ?', (card,))
             row = c.fetchone()
-            conn.close()
             if row:
+                c.execute('INSERT INTO attempts(card, successful) VALUES(?, ?)', (card,1))
+                conn.commit()
+                conn.close()
                 return redirect(url_for('dashboard', user=row[0]))
             else:
+                c.execute('INSERT INTO attempts(card, successful) VALUES(?, ?)', (card,0))
+                conn.commit()
+                conn.close()
                 flash('Card not recognized.', 'banned')
         else:
-            flash('No card detected.')
+            flash('No card detected.', 'banned')
         return redirect(url_for('index'))
 
     session.pop('_flashes', None)

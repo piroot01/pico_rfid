@@ -89,7 +89,7 @@ def callback_worker():
                 except Exception as e3:
                     print("Publish retry failed:", e3)
         else:
-            utime.sleep_ms(100)
+            utime.sleep_ms(200)
 
 # Start worker on second core
 def start_worker():
@@ -138,7 +138,7 @@ def main():
                     last_card    = card
                     last_call_ts = now
 
-        utime.sleep_ms(100)
+        utime.sleep_ms(200)
 
 if __name__ == '__main__':
     main()
