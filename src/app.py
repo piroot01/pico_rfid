@@ -1,17 +1,18 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 import sqlite3
 import threading
 from paho.mqtt.client import Client as MqttClient
 import time
 
-# Flask app – using templates/ and secret key for flashing messages
 app = Flask(__name__, template_folder='templates')
 app.secret_key = 'supersecretkey'
+app.config['SESSION_PERMANENT'] = False
 DB = 'rfid.db'
 
 # MQTT Settings
 MQTT_BROKER = 'localhost'
 TOPIC_SCAN = 'rfid/scan'
+TOPIC_CONTROL = 'rfid/control'
 
 # In-memory mapping of pending scans: list of (card_id, timestamp)
 pending = []
@@ -36,16 +37,19 @@ def init_db():
         card TEXT PRIMARY KEY,
         username TEXT UNIQUE
     )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS banned(
+        card TEXT PRIMARY KEY
+    )''')
     conn.commit()
     conn.close()
 
 # MQTT client thread
+mqtt_client = MqttClient()
 def mqtt_thread():
-    client = MqttClient()
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(MQTT_BROKER)
-    client.loop_forever()
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+    mqtt_client.connect(MQTT_BROKER)
+    mqtt_client.loop_forever()
 
 # Helper to clean expired pending entries and find a matching card
 def wait_for_card(timeout, predicate):
@@ -63,58 +67,92 @@ def wait_for_card(timeout, predicate):
         time.sleep(0.1)
     return None
 
-# Routes
+# Publish control messages to RPi
+def set_scan_state(enabled: bool):
+    state = 'start' if enabled else 'stop'
+    print("changing the state", state)
+    mqtt_client.publish(TOPIC_CONTROL, state, qos=1)
+
 @app.route('/')
 def index():
+    session.pop('reg_attempts', None)
     return render_template('index.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if 'reg_attempts' not in session:
+        session['reg_attempts'] = 0
+
+    if request.method == 'POST':
+        username = request.form['username'].strip()
+        if not username:
+            flash('Username is required.')
+            return redirect(url_for('register'))
+
+        # signal RPi to start scanning
+        set_scan_state(True)
+        flash('Please scan a new card within 3 seconds.')
+        card = wait_for_card(3, lambda c: True)
+        # signal RPi to stop publishing
+        set_scan_state(False)
+
+        session['reg_attempts'] += 1
+        if not card:
+            flash(f'No card detected. Attempt {session["reg_attempts"]} of 3.')
+        else:
+            conn = sqlite3.connect(DB)
+            c = conn.cursor()
+            try:
+                c.execute('INSERT INTO cards(card, username) VALUES(?, ?)', (card, username))
+                conn.commit()
+                flash('Registration successful!')
+                session.pop('reg_attempts', None)
+                conn.close()
+                return redirect(url_for('index'))
+            except sqlite3.IntegrityError:
+                flash(f'Card or username already registered. Attempt {session["reg_attempts"]} of 3.')
+                conn.close()
+
+        if session['reg_attempts'] >= 3:
+            flash('Registration failed after 3 attempts.')
+            session.pop('reg_attempts', None)
+            return redirect(url_for('index'))
+        return redirect(url_for('register'))
+
+    return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        conn = sqlite3.connect(DB)
-        c = conn.cursor()
-        c.execute('SELECT card FROM cards WHERE username=?', (username,))
-        row = c.fetchone()
-        conn.close()
-        if not row:
-            flash('Username not registered.')
-            return redirect(url_for('login'))
-        card_expected = row[0]
-        flash('Please scan your card within 10 seconds.')
-        scanned = wait_for_card(10, lambda c: c == card_expected)
-        if scanned:
-            return redirect(url_for('dashboard', user=username))
-        else:
-            flash('Card scan failed or did not match. Try again.')
-            return redirect(url_for('login'))
-    return render_template('login.html')
+        # start scan
+        set_scan_state(True)
+        flash('Please scan your card within 3 seconds.')
+        card = wait_for_card(3, lambda c: True)
+        # stop scan
+        set_scan_state(False)
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        attempts = 0
-        while attempts < 3:
-            flash(f'Attempt {attempts+1}: Please scan a new card within 10 seconds.')
-            scanned = wait_for_card(10, lambda c: True)
-            if scanned:
-                conn = sqlite3.connect(DB)
-                c = conn.cursor()
-                try:
-                    c.execute('INSERT INTO cards(card,username) VALUES(?,?)', (scanned, username))
-                    conn.commit()
-                    conn.close()
-                    flash('Registration successful!')
-                    return redirect(url_for('index'))
-                except sqlite3.IntegrityError:
-                    flash('Card already registered. Try a different card.')
-                    conn.close()
-                    return redirect(url_for('register'))
-            attempts += 1
-        flash('Registration failed after 3 attempts.')
+        if card:
+            conn = sqlite3.connect(DB)
+            c = conn.cursor()
+            c.execute('SELECT 1 FROM banned WHERE card = ?', (card,))
+            banned_row = c.fetchone()
+            if banned_row:
+                flash('You shall not pass because you are banned.', 'banned')
+                conn.close()
+                return redirect(url_for('index'))
+            c.execute('SELECT username FROM cards WHERE card = ?', (card,))
+            row = c.fetchone()
+            conn.close()
+            if row:
+                return redirect(url_for('dashboard', user=row[0]))
+            else:
+                flash('Card not recognized.')
+        else:
+            flash('No card detected.')
         return redirect(url_for('index'))
-    return render_template('register.html')
+
+    session.pop('_flashes', None)
+    return render_template('login.html')
 
 @app.route('/dashboard')
 def dashboard():
