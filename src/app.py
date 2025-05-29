@@ -146,7 +146,7 @@ def login():
             if row:
                 return redirect(url_for('dashboard', user=row[0]))
             else:
-                flash('Card not recognized.')
+                flash('Card not recognized.', 'banned')
         else:
             flash('No card detected.')
         return redirect(url_for('index'))
