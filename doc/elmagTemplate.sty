@@ -1,0 +1,294 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% MAIN THEME
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%default themes
+\usetheme{CambridgeUS}	% default theme
+\usecolortheme{whale} 	% default color theme
+\usefonttheme{serif} 	% default font theme
+
+% Required packages
+% \RequirePackage[backend=bibtex, autocite=footnote, labelnumber=true, sortcites=true, backref=true, style=ieee, hyperref=true, sorting=nyt, block=none, mcite]{biblatex} % for references
+\RequirePackage{booktabs} % for better spacing in tables
+\RequirePackage[justification=centering]{caption} % center captions
+\RequirePackage{hyperref} % for hyperrefs
+\RequirePackage{tikz} % used for possitioning of logos in frame title frame
+\RequirePackage{subfig} % for subfigures
+\RequirePackage{xcolor} % for defines colors
+
+% command for affiliation - fist arg: tex (superscript is used), second arg: bookrefs (brackets are used)
+% \newcommand{\affiliation}[1]{\texorpdfstring{\textsuperscript{#1}}{(#1)}}
+
+% Patch of footnomark allowing usage of labels
+% \patchcmd{\footnotemark}{\stepcounter{footnote}}{\refstepcounter{footnote}}{}{}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% COLORS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% elmag colors
+\definecolor{elmagBlueL}{RGB}{0, 103, 144}
+\definecolor{elmagBlueD}{RGB}{0, 55, 93}
+\definecolor{elmagBlack}{RGB}{0, 0, 0}
+\definecolor{elmagGrayD}{RGB}{64, 64, 64}
+\definecolor{elmagGrayL}{RGB}{245, 245, 245}
+\definecolor{elmagOrange}{RGB}{255, 69,0}
+
+% colorbrewer Paired-12
+\definecolor{PairedA}{RGB}{166, 206, 227}
+\definecolor{PairedB}{RGB}{ 31, 120, 180}
+\definecolor{PairedC}{RGB}{178, 223, 138} 
+\definecolor{PairedD}{RGB}{ 41, 128,  35}   % made darker by 20%
+\definecolor{PairedE}{RGB}{251, 154, 153}
+\definecolor{PairedF}{RGB}{182,  21,  22}   % made darker by 20%
+\definecolor{PairedG}{RGB}{253, 191, 111}
+\definecolor{PairedH}{RGB}{255, 127,   0}
+\definecolor{PairedI}{RGB}{202, 178, 214}
+\definecolor{PairedJ}{RGB}{106,  61, 154}
+\definecolor{PairedK}{RGB}{255, 255, 153}
+\definecolor{PairedL}{RGB}{177,  89,  40}
+
+% template
+\setbeamercolor{structure}{fg = elmagBlueL}
+\setbeamercolor{palette primary}{bg = elmagBlack, fg = white} 	% strip: top right and bottom right
+\setbeamercolor{palette secondary}{bg = elmagBlueD, fg = white} % strip: bottom middle
+\setbeamercolor{palette tertiary}{bg = elmagBlueL, fg = white} 	% strip: top left and botttom left
+\setbeamercolor{title}{bg=white, fg = elmagBlueD} 				% title at title page
+\setbeamercolor{frametitle}{bg = elmagGrayL, fg = elmagBlueL} 	% frame title
+\setbeamercolor{alerted text}{fg = elmagOrange}					% alert color
+\setbeamercolor{background canvas}{bg = white}    				% background color
+\hypersetup{
+	colorlinks = true, 		% false: boxed links; true: colored links
+	linkcolor = elmagBlueL, % color of internal links
+	citecolor = elmagBlueL, % color of links to bibliography
+	filecolor = elmagBlueL,	% color of file links
+	urlcolor = elmagBlueL, 	% color of external links
+}
+
+% references
+\setbeamercolor*{bibliography entry journal}{fg = elmagBlack} 
+\setbeamercolor*{bibliography entry author}{fg = elmagBlack} 
+\setbeamercolor*{bibliography entry note}{fg = elmagBlack}
+
+% headline - reset colors of links in top strip
+\addtobeamertemplate{headline}{\hypersetup{allcolors = .}}{} % 
+
+% table of content - reset colors of links in TOC
+\let\tocOld\tableofcontents % coppy old definiton of TOC
+\renewcommand{\tableofcontents}{\hypersetup{allcolors = .}\tocOld} % set default (black) colors for links and call default TOC
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% THEME MODIFICATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% navigation panel - hide navigation panel
+\setbeamertemplate{navigation symbols}{}
+
+% logo in frame title
+\addtobeamertemplate{frametitle}{}{%
+	\begin{tikzpicture}[remember picture, overlay]
+	\node[anchor = north east, yshift = -\headheight] at (current page.north east) {%
+		\href{https://www.cvut.cz/en}{\includegraphics[height=0.8cm]{logoCTU-black}}
+	};
+	\end{tikzpicture}} 
+
+% spacing between frametitle and frame content
+\addtobeamertemplate{frametitle}{\vspace*{0.0cm}}{\vspace*{-0.5cm}} % the first vspace moves the Frame title the second moves the text coming after the frame title
+
+%% margins
+\setbeamersize{
+	text margin left = 7mm,
+	text margin right = 7mm} 
+
+% spacing in TOC
+\makeatletter
+\patchcmd{\beamer@sectionintoc}{\vfill}{\vskip\itemsep}{}{} % fixed spacing between items in TOC
+\makeatother  
+
+% redefinition of footline (columns width, elimination of date and affiliation)
+\makeatletter
+\setbeamertemplate{footline}
+{
+	\leavevmode%
+	\hypersetup{allcolors=.}% set colors of links
+	\hbox{%
+		\begin{beamercolorbox}[wd = 0.3\paperwidth, ht = 2.25ex, dp = 1ex, center]{author in head/foot}%
+			\usebeamerfont{author in head/foot}\insertshortauthor
+		\end{beamercolorbox}%
+		\begin{beamercolorbox}[wd = 0.6\paperwidth, ht = 2.25ex, dp = 1ex, center]{title in head/foot}%
+			\usebeamerfont{title in head/foot}\insertshorttitle
+		\end{beamercolorbox}%
+		\begin{beamercolorbox}[wd = 0.1\paperwidth, ht = 2.25ex, dp = 1ex, center]{date in head/foot}%
+			\usebeamerfont{date in head/foot}
+			\insertframenumber{} / \inserttotalframenumber
+	\end{beamercolorbox}}%
+	\vskip0pt%
+}
+\makeatother
+
+% titlepage
+\defbeamertemplate*{title page}{}[1][]{%
+	\vbox{}
+	\vfill
+	\begin{centering}
+		\begin{centering}
+			\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par%
+			\ifx\insertsubtitle\@empty%
+			\else%
+			\vskip0.25em%
+			{\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}\insertsubtitle\par}%
+			\fi%     
+		\end{centering}
+		\vskip1.5em\par
+		\begin{centering}
+			\usebeamerfont{author}\usebeamercolor[fg]{author}\insertauthor
+		\end{centering}
+		\vskip1em\par
+		\begin{centering}
+			\usebeamerfont{institute}\usebeamercolor[fg]{institute}\insertinstitute
+		\end{centering}
+		\vskip1em\par
+		\begin{centering}
+			\usebeamerfont{date}\usebeamercolor[fg]{date}\insertdate
+		\end{centering}\vskip0.5em
+		{\usebeamercolor[fg]{titlegraphic}\inserttitlegraphic\par}
+	\end{centering}
+	\vfill
+}
+
+% background at title page
+\titlegraphic{\begin{tikzpicture}[remember picture, overlay]%
+	\node[opacity = 0.03, anchor = south east, yshift = \footheight] at (current page.south east) {\includegraphics[height = 0.6\paperheight, keepaspectratio]{logoCTU-blue}};
+	\end{tikzpicture}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% LISTS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% itemize
+\setbeamertemplate{itemize item}{\color{elmagBlueL}$\blacktriangleright$}
+\setbeamertemplate{itemize subitem}{\color{elmagBlueL}$\blacktriangleright$}
+\setbeamertemplate{itemize subsubitem}{\color{elmagBlueL}$\blacktriangleright$}
+
+% enumerate
+\setbeamertemplate{enumerate items}[default] % classical "points"
+\setbeamercolor{enumerate number projected}{fg = elmagBlack}
+\setbeamercolor*{enumerate item}{fg = elmagBlueL}
+\setbeamercolor*{enumerate subitem}{fg = elmagBlueL} 
+\setbeamercolor*{enumerate subsubitem}{fg = elmagBlueL}
+
+% list of references
+\setbeamertemplate{bibliography item}{\color{elmagBlueL}$\blacktriangleright$}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BLOCKS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{blocks}[rounded][shadow = false] % first argument: rounded / default. If rounded, second argument: shadow = true/false
+% Standard block:
+\setbeamercolor{block title}{bg = elmagGrayD, fg = white}
+\setbeamercolor{block body}{bg = elmagGrayL, fg = black}
+
+% Alert block:
+\setbeamercolor{block title alerted}{bg = elmagOrange, fg = white}
+\setbeamercolor{block body alerted}{bg = elmagGrayL, fg = black}
+
+% Example block:
+\setbeamercolor{block title example}{bg = elmagBlueD, fg = white}
+\setbeamercolor{block body example}{bg = elmagGrayL, fg = black}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% CAPTIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{caption label separator}{} % clear separator (":") between Fig. and Tab.
+\setbeamerfont{caption}{series = \normalfont, size = \footnotesize} % smaller font
+\renewcommand{\figurename}{} % redefine prefix Figure
+\renewcommand{\tablename}{}  % redefine prefix Table
+\setbeamercolor{caption}{fg=elmagBlueD}
+
+% set subfloats
+\captionsetup[subfloat]{%
+	font = {footnotesize, color = elmagBlueD},%
+	labelfont = {footnotesize, color = elmagBlueD}%
+}
+
+% treatment of prefixes when babel is used with czech or english definition
+\makeatletter
+\@ifpackageloaded{babel}{
+	\addto\captionsczech{\renewcommand{\figurename}{}}%
+	\addto\captionsczech{\renewcommand{\tablename}{}}%
+	\addto\captionsenglish{\renewcommand{\figurename}{}}%
+	\addto\captionsenglish{\renewcommand{\tablename}{}}%
+}{}
+\makeatother 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% BUTTONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\tikzstyle{elmagButton} = [fill, elmagBlueL, rounded corners = 2pt, text = white, inner xsep = 2mm, inner ysep = 1mm]
+
+\renewcommand{\beamerbutton}[1]{\tikz \node[elmagButton]{\footnotesize \vphantom{Ty} #1};}
+\renewcommand{\beamergotobutton}[1]{\tikz \node[elmagButton]{\footnotesize \vphantom{Ty} $\blacktriangleright$ #1};}
+\renewcommand{\beamerskipbutton}[1]{\tikz \node[elmagButton]{\footnotesize \vphantom{Ty} $\blacktriangleright$\hspace{-1mm}$\blacktriangleright$ #1};}
+\renewcommand{\beamerreturnbutton}[1]{\tikz \node[elmagButton]{\footnotesize \vphantom{Ty} $\blacktriangleleft$ #1};}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% OUTLINE DESIGN
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{section in toc}{%
+	\textcolor{elmagBlueL}{\inserttocsectionnumber.}~\inserttocsection}
+\setbeamertemplate{subsection in toc}{%
+	\hspace{1em}\textcolor{elmagBlueL}{\inserttocsectionnumber.\inserttocsubsectionnumber}~\inserttocsubsection\par}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% HANDOUT MODE - save color for printing version
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\mode<handout>{
+	\setbeamercolor{structure}{fg = elmagBlueL}
+	\setbeamercolor{palette primary}{bg = white, fg = black} 	% strip: top right and bottom right
+	\setbeamercolor{palette secondary}{bg = white, fg = black}  % strip: bottom middle
+	\setbeamercolor{palette tertiary}{bg = white, fg = black} 	% strip: top left and botttom left
+	\setbeamercolor{title}{bg=white, fg = elmagBlueD} 			% title at title page
+	\setbeamercolor{frametitle}{bg = white, fg = elmagBlueL} 	% frame title
+	\setbeamercolor{alerted text}{fg = elmagOrange}				% alert color
+	\setbeamercolor{background canvas}{bg = white}    			% background color
+	
+	% Blocks titles
+	\setbeamercolor{block title}{bg = elmagGrayL, fg = black}
+	\setbeamercolor{block title alerted}{bg = elmagGrayL, fg = elmagOrange}
+	\setbeamercolor{block title example}{bg = elmagGrayL, fg = elmagBlueD}
+	
+	\addtobeamertemplate{footline}{}{%
+	\begin{tikzpicture}[remember picture, overlay]%
+	\draw[black] (0, 3.25ex) -- (\paperwidth, 3.25ex);
+	\end{tikzpicture}}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% TAGS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pgfdeclarelayer{tagsLayer}    % declare layer for tags
+\pgfsetlayers{main,tagsLayer} % set the order of the layers (main is the standard layer)
+
+% define own fill property with rounded corners
+\tikzset{roundedfill/.style={append after command={
+   \pgfextra
+        \draw[sharp corners, fill=#1, draw = none]% 
+    (\tikzlastnode.west)% 
+    [rounded corners=4pt] |- (\tikzlastnode.north)% 
+    [rounded corners=0pt] -| (\tikzlastnode.east)% 
+    [rounded corners=0pt] |- (\tikzlastnode.south)% 
+    [rounded corners=4pt] -| (\tikzlastnode.west);
+   \endpgfextra}}}
+
+\usetikzlibrary{calc,positioning,shapes.misc}
+% commad to generate new tag
+\newcommand{\generatetag}[6]{%
+  \expandafter\newcommand\csname tag#1\endcsname {%
+    \begin{tikzpicture}[remember picture, overlay]
+        \begin{pgfonlayer}{tagsLayer}
+        	\node[anchor = south east, inner sep = 0pt, roundedfill = #2] (tag) at ($(current page.south east) + (0,\the\headheight) + (0, #5\textheight)$) {%
+        	\tikz\path node[%
+        	align = center, rotate = 90,%
+        	inner sep = 0pt, text width = #6\textheight,%
+        	text = #3] (b) at (0,0) {\vspace{-2pt}\\#4\vphantom{Ty[]}\vspace{2pt}};};
+        \end{pgfonlayer}
+    \end{tikzpicture}}%
+}
