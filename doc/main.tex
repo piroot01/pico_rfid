@@ -50,7 +50,7 @@ fill=green!30]
 \tikzstyle{arrow} = [thick,->,>=stealth]
 
 % Metadata
-\title[\textsc{Matlab} competition task]{RFID login/registration demo}
+\title[NSI]{RFID login/registration demo}
 \author[Tom\'a\v{s} Mach\'a\v{c}ek]{Tom\'a\v{s} Mach\'a\v{c}ek}
 \date[\today]{\today}
 
@@ -95,7 +95,8 @@ fill=green!30]
         \begin{class}[text width=4cm, xshift=3cm, yshift=-2cm]{\detokenize{attempts}}{0,0}
             \attribute{\detokenize{id} : INT \quad {\color{gray}(PK)}}
             \attribute{\detokenize{card} : TEXT}
-            \attribute{\detokenize{timestamp} : TEXT}
+            \attribute{\detokenize{successful} : BOOLEAN}
+            \attribute{\detokenize{timestamp} : TIMESTAMP}
         \end{class}
 
             \aggregation{\detokenize{banned}}{}{}{\detokenize{cards}}
